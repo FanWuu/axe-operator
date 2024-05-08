@@ -1,0 +1,13 @@
+apiVersion: database.wufan/v1
+kind: Mysql
+metadata:
+  labels:
+    app.kubernetes.io/name: axe-dmp
+    app.kubernetes.io/managed-by: kustomize
+  name: mysql-axe
+spec:
+  replica: 3
+  mysql:
+    rootPassword: "123456"
+  router:
+    replica: 1

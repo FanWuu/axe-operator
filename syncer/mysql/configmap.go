@@ -1,0 +1,148 @@
+package syncer
+
+import (
+	databasev1 "axe/api/v1"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+var mysqlConfigData = `
+[mysqld]
+user    = mysql
+port    = 3306
+character-set-server = UTF8MB4
+skip_name_resolve = 1
+default_time_zone = "+8:00"
+
+lock_wait_timeout = 3600
+open_files_limit    = 65535
+back_log = 1024
+max_connections = 1024
+max_connect_errors = 1000000
+table_open_cache = 2048
+table_definition_cache = 2048
+thread_stack = 512K
+sort_buffer_size = 4M
+join_buffer_size = 4M
+read_buffer_size = 8M
+read_rnd_buffer_size = 4M
+bulk_insert_buffer_size = 64M
+thread_cache_size = 768
+interactive_timeout = 600
+wait_timeout = 600
+tmp_table_size = 96M
+max_heap_table_size = 96M
+
+#log settings
+log_timestamps = SYSTEM
+log_error_verbosity = 3
+slow_query_log = 1
+log_slow_extra = 1
+long_query_time = 0.01
+log_queries_not_using_indexes = 1
+log_throttle_queries_not_using_indexes = 60
+min_examined_row_limit = 100
+log_slow_admin_statements = 1
+log_slow_slave_statements = 1
+binlog_format = ROW
+sync_binlog = 1
+binlog_cache_size = 4M
+max_binlog_cache_size = 6G
+max_binlog_size = 1G
+binlog_rows_query_log_events = 1
+binlog_expire_logs_seconds = 604800
+binlog_checksum = CRC32
+gtid_mode = ON
+enforce_gtid_consistency = TRUE
+
+#replication settings
+relay_log_recovery = 1
+slave_parallel_type = LOGICAL_CLOCK
+#并行复制线程数可以设置为逻辑CPU数量的2倍
+slave_parallel_workers = 64
+binlog_transaction_dependency_tracking = WRITESET
+slave_preserve_commit_order = 1
+slave_checkpoint_period = 2
+
+#启用InnoDB并行查询优化功能
+loose-force_parallel_execute = OFF
+#设置每个SQL语句的并行查询最大并发度
+loose-parallel_default_dop = 8
+#设置系统中总的并行查询线程数，可以和最大逻辑CPU数量一样
+loose-parallel_max_threads = 64
+#并行执行时leader线程和worker线程使用的总内存大小上限，可以设置物理内存的5-10%左右
+loose-parallel_memory_limit = 12G
+
+#innodb settings
+innodb_buffer_pool_size = 16G
+innodb_buffer_pool_instances = 8
+innodb_data_file_path = ibdata1:12M:autoextend
+innodb_flush_log_at_trx_commit = 1
+innodb_log_buffer_size = 32M
+innodb_log_file_size = 2G
+innodb_log_files_in_group = 3
+innodb_doublewrite_files = 2
+innodb_max_undo_log_size = 4G
+# 根据您的服务器IOPS能力适当调整
+# 一般配普通SSD盘的话，可以调整到 10000 - 20000
+# 配置高端PCIe SSD卡的话，则可以调整的更高，比如 50000 - 80000
+innodb_io_capacity = 4000
+innodb_io_capacity_max = 8000
+innodb_open_files = 65534
+innodb_flush_method = O_DIRECT
+innodb_lru_scan_depth = 4000
+innodb_lock_wait_timeout = 10
+innodb_rollback_on_timeout = 1
+innodb_print_all_deadlocks = 1
+innodb_online_alter_log_max_size = 4G
+innodb_print_ddl_logs = 1
+innodb_status_file = 1
+innodb_status_output = 0
+innodb_status_output_locks = 1
+innodb_sort_buffer_size = 64M
+
+`
+
+var PluginConfdata = `
+[mysqld]
+loose-plugin_load_add = 'mysql_clone.so'
+loose-plugin_load_add = 'group_replication.so'
+loose-group_replication_start_on_boot = ON
+loose-group_replication_bootstrap_group = OFF
+loose-group_replication_exit_state_action = READ_ONLY
+loose-group_replication_flow_control_mode = "DISABLED"
+`
+
+var RouterConf = `
+
+`
+
+func MysqlConfigmap(ins *databasev1.Mysql) *corev1.ConfigMap {
+
+	conf := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ins.Name + "-mysql",
+			Namespace: ins.Namespace,
+		},
+		Data: map[string]string{
+			"mysql.cnf":  mysqlConfigData,
+			"plugin.cnf": PluginConfdata,
+		},
+	}
+	return conf
+}
+
+func RouterConfigmap(ins *databasev1.Mysql) *corev1.ConfigMap {
+
+	conf := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ins.Name + "-router",
+			Namespace: ins.Namespace,
+		},
+		Data: map[string]string{
+			"router.cnf": RouterConf,
+		},
+	}
+	return conf
+}
