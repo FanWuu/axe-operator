@@ -1,5 +1,7 @@
 # axe-dmp
-// TODO(user): Add simple overview of use/purpose
+innodb cluster operator 
+
+![operator](/doc/cluster.png)
 
 ## Description
 // TODO(user): An in-depth paragraph about your project and overview of use
