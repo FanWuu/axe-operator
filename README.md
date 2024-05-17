@@ -1,7 +1,7 @@
 # axe-dmp
 innodb cluster operator 
 
-![operator](/doc/cluster.png)
+![operator](https://github.com/FanWuu/axe-operator/blob/master/doc/cluster.png)
 
 ## Description
 // TODO(user): An in-depth paragraph about your project and overview of use
