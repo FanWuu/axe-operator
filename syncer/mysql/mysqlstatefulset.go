@@ -97,6 +97,10 @@ func mysqlContainers(ins *databasev1.Mysql) []corev1.Container {
 					Name:      ins.Name + "-mysql",
 					MountPath: "/mnt/config/",
 				},
+				{
+					Name:      "mysql-data",
+					MountPath: "/var/lib/mysql",
+				},
 			},
 			Resources: ins.Spec.PodPolicy.ExtraResources,
 		},
@@ -113,13 +117,18 @@ func MysqlStatefulset(ins *databasev1.Mysql) *appsv1.StatefulSet {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ins.Name,
 			Namespace: ins.Namespace,
+			Labels: map[string]string{
+				"clustername":   ins.Name,
+				"app":           MYSQLAPP,
+				"clusterstatus": MgrNOTinstalled,
+			},
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &ins.Spec.Replica,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"clustername": ins.Name,
-					"app":         "mysql",
+					"app":         MYSQLAPP,
 				},
 			},
 			ServiceName: ins.Name,
@@ -127,7 +136,7 @@ func MysqlStatefulset(ins *databasev1.Mysql) *appsv1.StatefulSet {
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: map[string]string{
 						"clustername": ins.Name,
-						"app":         "mysql",
+						"app":         MYSQLAPP,
 					},
 				},
 
@@ -151,6 +160,16 @@ func MysqlStatefulset(ins *databasev1.Mysql) *appsv1.StatefulSet {
 							Name: "server-id",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+						{
+
+							Name: "mysql-data",
+							VolumeSource: corev1.VolumeSource{
+								HostPath: &corev1.HostPathVolumeSource{
+									Path: "/data/mysql/" + ins.Namespace + "/" + ins.Name,
+									// Type: &corev1.HostPathDirectoryOrCreate,
+								},
 							},
 						},
 					},

@@ -97,14 +97,13 @@ func (r *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		log.Log.Info("cleanup cr resource sucess ")
 	} else {
 		log.Log.Info("create or update resource", "clustername", ins.Name)
-		if _, err := CreatCluster(ctx, r.Client, ins); err != nil {
+		if _, err := CreatCluster(ctx, r.Client, ins); err == nil {
+			log.Log.Info("create cluster sucess ")
+		} else {
+			log.Log.Error(err, "create cluster failed ")
 			return ctrl.Result{}, err
 		}
 	}
-
-	// TODO  判断 statefulset 状态 mysql shell 初始化 innodb cluster
-	// TODO  mysql router 初始化
-	// reset  crd status
 
 	return ctrl.Result{}, nil
 }

@@ -10,7 +10,7 @@ import (
 func MysqlHeadlesSVC(ins *databasev1.Mysql) *corev1.Service {
 	labels := map[string]string{
 		"clustername": ins.Name,
-		"app":         "mysql",
+		"app":         MYSQLAPP,
 	}
 
 	svc := &corev1.Service{
@@ -37,7 +37,7 @@ func MysqlHeadlesSVC(ins *databasev1.Mysql) *corev1.Service {
 func MysqlClusterSVC(ins *databasev1.Mysql) *corev1.Service {
 	labels := map[string]string{
 		"clustername": ins.Name,
-		"app":         "mysql",
+		"app":         MYSQLAPP,
 	}
 
 	svc := &corev1.Service{
