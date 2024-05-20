@@ -113,7 +113,16 @@ func MysqlStatefulset(ins *databasev1.Mysql) *appsv1.StatefulSet {
 		return nil
 	}
 
+	lables := map[string]string{
+		"clustername": ins.Name,
+		"app":         MYSQLAPP,
+	}
+
 	statefulSet := &appsv1.StatefulSet{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "StatefulSet",
+			APIVersion: "apps/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ins.Name,
 			Namespace: ins.Namespace,
@@ -126,18 +135,12 @@ func MysqlStatefulset(ins *databasev1.Mysql) *appsv1.StatefulSet {
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &ins.Spec.Replica,
 			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"clustername": ins.Name,
-					"app":         MYSQLAPP,
-				},
+				MatchLabels: lables,
 			},
 			ServiceName: ins.Name,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"clustername": ins.Name,
-						"app":         MYSQLAPP,
-					},
+					Labels: lables,
 				},
 
 				Spec: corev1.PodSpec{

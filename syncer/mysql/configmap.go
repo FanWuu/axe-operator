@@ -23,8 +23,11 @@ func MysqlConfigmap(ins *databasev1.Mysql) *corev1.ConfigMap {
 }
 
 func RouterConfigmap(ins *databasev1.Mysql) *corev1.ConfigMap {
-
 	conf := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ins.Name + "-router",
 			Namespace: ins.Namespace,

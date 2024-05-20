@@ -41,6 +41,10 @@ func MysqlClusterSVC(ins *databasev1.Mysql) *corev1.Service {
 	}
 
 	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      ins.Name,
 			Namespace: ins.Namespace,

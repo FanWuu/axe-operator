@@ -2,10 +2,12 @@ package controller
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/presslabs/controller-util/pkg/meta"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,43 +32,33 @@ func (r *MysqlReconciler) cleanupRelatedResources(ctx context.Context, ins *data
 			log.Log.Error(err, "failed to update cluster")
 		}
 	}()
-
+	key := types.NamespacedName{
+		Namespace: ins.GetNamespace(),
+		Name:      ins.GetName(),
+	}
 	// cleanup StatefulSet
-	statefulSetName := fmt.Sprintf(ins.Name)
-	statefulSet := syncer.MysqlStatefulset(ins)
-	if err := r.Get(ctx, types.NamespacedName{Name: statefulSetName, Namespace: ins.Namespace}, statefulSet); err == nil {
+	statefulSet := &appsv1.StatefulSet{}
+	if err := r.Get(ctx, key, statefulSet); err == nil {
 		if err := r.Delete(ctx, statefulSet); err != nil {
-			return fmt.Errorf("failed to delete StatefulSet %s: %w", statefulSetName, err)
+			return fmt.Errorf("failed to delete StatefulSet %s: %w", ins.Name, err)
 		}
 	} else if !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to get StatefulSet %s: %w", statefulSetName, err)
+		return fmt.Errorf("failed to get StatefulSet %s: %w", ins.Name, err)
 	}
 
-	// cleanup deployment
-	// deploymentname := fmt.Sprintf(ins.Name)
-	// deployment := syncer.RouterDeployment(ins)
-	// if err := r.Get(ctx, types.NamespacedName{Name: deploymentname, Namespace: ins.Namespace}, deployment); err == nil {
-	// 	if err := r.Delete(ctx, deployment); err != nil {
-	// 		return fmt.Errorf("failed to delete deployment %s: %w", deploymentname, err)
-	// 	}
-	// } else if !errors.IsNotFound(err) {
-	// 	return fmt.Errorf("failed to get deployment %s: %w", deploymentname, err)
-	// }
-
 	// cleanup Headless Service
-	svcName := fmt.Sprintf(ins.Name)
-	svc := syncer.MysqlHeadlesSVC(ins)
-	if err := r.Get(ctx, types.NamespacedName{Name: svcName, Namespace: ins.Namespace}, svc); err == nil {
+	svc := &corev1.Service{}
+	if err := r.Get(ctx, key, svc); err == nil {
 		if err := r.Delete(ctx, svc); err != nil {
-			return fmt.Errorf("failed to delete Service %s: %w", svcName, err)
+			return fmt.Errorf("failed to delete Service %s: %w", ins.Name, err)
 		}
 	} else if !errors.IsNotFound(err) {
-		return fmt.Errorf("failed to get Service %s: %w", svcName, err)
+		return fmt.Errorf("failed to get Service %s: %w", ins.Name, err)
 	}
 
 	// cleanup configmap
 	configname := fmt.Sprintf("%s-%s", ins.Name, "mysql")
-	configmap := syncer.MysqlConfigmap(ins)
+	configmap := &corev1.ConfigMap{}
 	if err := r.Get(ctx, types.NamespacedName{Name: configname, Namespace: ins.Namespace}, configmap); err == nil {
 		if err := r.Delete(ctx, configmap); err != nil {
 			return fmt.Errorf("failed to delete configmap %s: %w", configmap, err)
@@ -84,92 +76,77 @@ func CreateOrUpdate(ctx context.Context, c client.Client, obj client.Object) err
 	if obj == nil {
 		return fmt.Errorf("object to create or update must not be nil")
 	}
-
-	key := client.ObjectKeyFromObject(obj)
-
+	// key := client.ObjectKeyFromObject(obj)
+	key := types.NamespacedName{
+		Namespace: obj.GetNamespace(),
+		Name:      obj.GetName(),
+	}
 	// Check if the resource already exists
-	err := c.Get(ctx, key, obj)
+	existingObj := obj.DeepCopyObject().(client.Object)
+	err := c.Get(ctx, key, existingObj)
+
 	switch {
 	case err == nil:
-		// Resource exists, update it
+		// Resource exists, check for updates before updating
+		if equality.Semantic.DeepEqual(existingObj, obj) {
+			log.Log.Info("No changes detected, skipping update", "namespace", obj.GetNamespace(), "kind", obj.GetObjectKind(), "name", obj.GetName())
+			return nil
+		}
+		log.Log.Info("update resource due to changes", "objspeace", obj.GetNamespace(), "objtype", obj.GetObjectKind(), "objname", obj.GetName())
 		return c.Update(ctx, obj)
 	case apierrors.IsNotFound(err):
 		// Resource doesn't exist, create it
+		log.Log.Info("create resource", "objspeace", obj.GetNamespace(), "objtype", obj.GetObjectKind(), "objname", obj.GetName())
 		return c.Create(ctx, obj)
 	default:
 		return fmt.Errorf("failed to get existing resource: %w", err)
 	}
 }
 
-func CreatCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) (ctrl.Result, error) {
-
-	_ = log.FromContext(ctx)
+func ApplyResources(ctx context.Context, r client.Client, ins *databasev1.Mysql) (ctrl.Result, error) {
+	log.Log.Info("create or update resource", "clusterspace", ins.Namespace, "clustername", ins.Name)
 
 	if err := CreateOrUpdate(ctx, r, syncer.MysqlHeadlesSVC(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
+
 	if err := CreateOrUpdate(ctx, r, syncer.MysqlConfigmap(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
+
 	if err := CreateOrUpdate(ctx, r, syncer.MysqlStatefulset(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
+	return ctrl.Result{}, nil
+}
 
+func CreateCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) (ctrl.Result, error) {
 	//create innodb cluster
-	statefulSetName := fmt.Sprintf(ins.Name)
-	statefulSet := syncer.MysqlStatefulset(ins)
-	if err := r.Get(ctx, types.NamespacedName{Name: statefulSetName, Namespace: ins.Namespace}, statefulSet); err == nil {
+	statefulSet := &appsv1.StatefulSet{}
+	key := types.NamespacedName{
+		Namespace: ins.GetNamespace(),
+		Name:      ins.GetName(),
+	}
+	if err := r.Get(ctx, key, statefulSet); err == nil {
 
 		// 检查 StatefulSet 是否正常运行
-		if statefulSet.Status.ReadyReplicas == statefulSet.Status.Replicas && statefulSet.ObjectMeta.Labels["clusterstatus"] == "MGR_NOT_INSTALLED" {
+		if statefulSet.Status.ReadyReplicas == statefulSet.Status.Replicas &&
+			statefulSet.Status.CurrentRevision == statefulSet.Status.UpdateRevision &&
+			statefulSet.ObjectMeta.Labels["clusterstatus"] == "MGR_NOT_INSTALLED" {
 			// dba.createcluster()
 			log.Log.Info("StatefulSet is running and innodb cluster lables MGR_NOT_INSTALLED")
-			if err := syncer.CreateOrUpdateMGR(ctx, ins); err == nil {
-				log.Log.Info("CreateOrUpdateMGR  SUCCESS")
-
-				//  if CreateOrUpdateMGR success r,update.statefulset lable clusterstatys
-				statefulSet.ObjectMeta.Labels["clusterstatus"] = "MGR_INSTALLED"
-
-				// 创建一个 JSON 补丁
-				patchBytes, err := json.Marshal(statefulSet)
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-
-				// 创建一个 RawPatch 实例
-				rawPatch := client.RawPatch(types.MergePatchType, patchBytes)
-
-				// 使用 RawPatch 更新 StatefulSet
-				if err := r.Patch(ctx, statefulSet, rawPatch); err != nil {
-					return ctrl.Result{}, err
-				}
+			if err := syncer.CreateMGR(ctx, ins); err == nil {
+				log.Log.Info("Create innodb cluster SUCCESS")
 
 				return ctrl.Result{}, nil
-
 			} else {
-				log.Log.Error(err, "CreateOrUpdateMGR  FAILED")
-
-				statefulSet.ObjectMeta.Labels["clusterstatus"] = "MGR_INSTALLED_FAILED"
-
-				// 创建一个 JSON 补丁
-				patchBytes, err := json.Marshal(statefulSet)
-				if err != nil {
-					return ctrl.Result{}, err
-				}
-
-				// 创建一个 RawPatch 实例
-				rawPatch := client.RawPatch(types.MergePatchType, patchBytes)
-
-				// 使用 RawPatch 更新 StatefulSet
-				if err := r.Patch(ctx, statefulSet, rawPatch); err != nil {
-					return ctrl.Result{}, err
-				}
-
-				return ctrl.Result{}, nil
-
+				log.Log.Error(err, "Create innodb cluster FAILED")
+				return ctrl.Result{}, err
 			}
 
-		} else if statefulSet.Status.ReadyReplicas == statefulSet.Status.Replicas && statefulSet.ObjectMeta.Labels["clusterstatus"] == "MGR_INSTALLED" {
+		} else if statefulSet.Status.ReadyReplicas == statefulSet.Status.Replicas &&
+			statefulSet.Status.CurrentRevision == statefulSet.Status.UpdateRevision &&
+			statefulSet.ObjectMeta.Labels["clusterstatus"] == "MGR_INSTALLED" {
 			// innodb cluster has already installed
 			log.Log.Info("StatefulSet is running and innodb cluster lables MGR_INSTALLED")
 			return ctrl.Result{}, nil
@@ -177,11 +154,10 @@ func CreatCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) (
 		} else {
 			log.Log.Error(err, "StatefulSet is not running normally ", statefulSet)
 			return ctrl.Result{}, err
-
 		}
 
 	} else if !errors.IsNotFound(err) {
-		log.Log.Error(err, "statefulset: ", statefulSetName, "not fondun")
+		log.Log.Error(err, "statefulset: ", ins.Name, "not fondun")
 	}
 	return ctrl.Result{}, nil
 }

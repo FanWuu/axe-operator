@@ -30,7 +30,7 @@ import (
 // 6. 缩容操作
 // 7. 升级操作
 // 完成以上操作后修改标签状态
-func ExeCmd(cmd string) {
+func ExeCmd(cmd string) (error, string) {
 	//TODO CHECK ERROR RESULT
 	c := exec.Command("sh", "-c", cmd)
 	var out bytes.Buffer
@@ -41,8 +41,10 @@ func ExeCmd(cmd string) {
 	log.Log.Info("exec", " cmd :", cmd)
 	if err != nil {
 		log.Log.Info(fmt.Sprint(err) + ": " + stderr.String())
+		return err, stderr.String()
 	}
 	log.Log.Info("Result: " + out.String())
+	return nil, out.String()
 }
 
 func pingMySQ(host string, passwd string) bool {
@@ -69,7 +71,8 @@ func pingMySQ(host string, passwd string) bool {
 
 	return false
 }
-func CreateOrUpdateMGR(ctx context.Context, ins *databasev1.Mysql) error {
+func CreateMGR(ctx context.Context, ins *databasev1.Mysql) error {
+
 	//mysql-axe-2.mysql-axe.default.svc.cluster.local
 	host0 := ins.Name + "-" + strconv.Itoa(0) + "." + ins.Name + "." + ins.Namespace + ".svc.cluster.local"
 	passwd := ins.Spec.Mysql.RootPassword
@@ -85,13 +88,16 @@ func CreateOrUpdateMGR(ctx context.Context, ins *databasev1.Mysql) error {
 		}
 
 		if i == 0 {
-			// 初始化集群
-			// TODO
+			// TODO  if cluster status is ok return nil
+			cmd := `/usr/bin/mysqlsh -uroot -p` + passwd + ` -h` + host + ` --cluster  -e "print(cluster.status())"`
+			if err, _ := ExeCmd(cmd); err == nil {
+				log.Log.Info("cluster is ready")
+				return nil
+			}
+			// else create cluster
 			log.Log.Info("create innodb cluster", "host:", host)
-			// cmd := `echo y |/usr/bin/mysqlsh -uroot -p` + passwd + ` -h` + host + `  -e "dba.dropMetadataSchema()"`
-			// ExeCmd(cmd)
 
-			cmd := `echo Y |/usr/bin/mysqlsh -uroot -p` + passwd + ` -h` + host + ` -e "dba.createCluster('mgr')"`
+			cmd = `echo Y |/usr/bin/mysqlsh -uroot -p` + passwd + ` -h` + host + ` -e "dba.createCluster('mgr')"`
 			ExeCmd(cmd)
 		} else {
 			// 添加节点
@@ -110,7 +116,5 @@ func CreateOrUpdateMGR(ctx context.Context, ins *databasev1.Mysql) error {
 	// print cluster.status()
 	cmds := `/usr/bin/mysqlsh  -uroot -p` + ins.Spec.Mysql.RootPassword + ` -h` + host0 + `  --cluster  -e "print(cluster.status())"`
 	ExeCmd(cmds)
-
-	// TODO UPDATE LABLES
 	return nil
 }

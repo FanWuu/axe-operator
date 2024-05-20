@@ -70,14 +70,6 @@ func (r *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	if err := r.Get(ctx, req.NamespacedName, ins); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
-	// log.Log.Info("cluster", "cluster", ins)
-
-	if ins.Status.State == "" {
-		ins.Status.State = databasev1.ClusterInitState
-		ins.Status.ReadyNodes = 1
-
-		r.Status().Update(ctx, ins)
-	}
 
 	// Add finalizer if is not added on the resource.
 	if !meta.HasFinalizer(&ins.ObjectMeta, FinalizerName) {
@@ -89,20 +81,42 @@ func (r *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 	// TODO delete cr relation resource 例如 StatefulSet、Headless Service 等
 	if !ins.GetDeletionTimestamp().IsZero() {
-		log.Log.Info("mysql cluster is deleting", "clustername", ins.Name)
-
+		log.Log.Info("mysql cluster is deleting", "clusterspace", ins.Namespace, "clustername", ins.Name)
 		if err := r.cleanupRelatedResources(ctx, ins); err != nil {
 			return ctrl.Result{}, err
 		}
-		log.Log.Info("cleanup cr resource sucess ")
+		log.Log.Info("cleanup crd sucess ")
+		return ctrl.Result{}, nil
+	}
+
+	// apply resources
+	if _, err := ApplyResources(ctx, r.Client, ins); err == nil {
+		log.Log.Info("Apply Resources sucess ")
 	} else {
-		log.Log.Info("create or update resource", "clustername", ins.Name)
-		if _, err := CreatCluster(ctx, r.Client, ins); err == nil {
-			log.Log.Info("create cluster sucess ")
-		} else {
-			log.Log.Error(err, "create cluster failed ")
+		log.Log.Error(err, "Apply Resources failed ")
+		return ctrl.Result{}, err
+	}
+
+	// create cluster
+	if _, err := CreateCluster(ctx, r.Client, ins); err != nil {
+		log.Log.Error(err, "create cluster failed ")
+		return ctrl.Result{}, err
+	}
+
+	// update lables
+	//fix the error : "the object has been modified; please apply your changes to the latest version and try again"
+	statefulSet := &appsv1.StatefulSet{}
+	r.Get(ctx, req.NamespacedName, statefulSet)
+	if statefulSet.Status.ReadyReplicas == statefulSet.Status.Replicas &&
+		statefulSet.Status.CurrentRevision == statefulSet.Status.UpdateRevision &&
+		statefulSet.ObjectMeta.Labels["clusterstatus"] == "MGR_NOT_INSTALLED" {
+		statefulSet.ObjectMeta.Labels["clusterstatus"] = "MGR_INSTALLED"
+
+		if err := r.Update(ctx, statefulSet); err != nil {
+			log.Log.Error(err, "update statefulset lables failed")
 			return ctrl.Result{}, err
 		}
+		log.Log.Info("update statefulset lable MGR_INSTALLED")
 	}
 
 	return ctrl.Result{}, nil
