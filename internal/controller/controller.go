@@ -32,13 +32,9 @@ func (r *MysqlReconciler) cleanupRelatedResources(ctx context.Context, ins *data
 			log.Log.Error(err, "failed to update cluster")
 		}
 	}()
-	key := types.NamespacedName{
-		Namespace: ins.GetNamespace(),
-		Name:      ins.GetName(),
-	}
 	// cleanup StatefulSet
 	statefulSet := &appsv1.StatefulSet{}
-	if err := r.Get(ctx, key, statefulSet); err == nil {
+	if err := r.Get(ctx, client.ObjectKeyFromObject(ins), statefulSet); err == nil {
 		if err := r.Delete(ctx, statefulSet); err != nil {
 			return fmt.Errorf("failed to delete StatefulSet %s: %w", ins.Name, err)
 		}
@@ -48,8 +44,28 @@ func (r *MysqlReconciler) cleanupRelatedResources(ctx context.Context, ins *data
 
 	// cleanup Headless Service
 	svc := &corev1.Service{}
-	if err := r.Get(ctx, key, svc); err == nil {
+	if err := r.Get(ctx, client.ObjectKeyFromObject(ins), svc); err == nil {
 		if err := r.Delete(ctx, svc); err != nil {
+			return fmt.Errorf("failed to delete Service %s: %w", ins.Name, err)
+		}
+	} else if !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to get Service %s: %w", ins.Name, err)
+	}
+
+	// cleanup router Service
+	svc = &corev1.Service{}
+	if err := r.Get(ctx, types.NamespacedName{Name: ins.Name + "-router", Namespace: ins.Namespace}, svc); err == nil {
+		if err := r.Delete(ctx, svc); err != nil {
+			return fmt.Errorf("failed to delete Service %s: %w", ins.Name, err)
+		}
+	} else if !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to get Service %s: %w", ins.Name, err)
+	}
+
+	// cleanup deployment
+	deploy := &appsv1.Deployment{}
+	if err := r.Get(ctx, types.NamespacedName{Name: ins.Name + "-router", Namespace: ins.Namespace}, deploy); err == nil {
+		if err := r.Delete(ctx, deploy); err != nil {
 			return fmt.Errorf("failed to delete Service %s: %w", ins.Name, err)
 		}
 	} else if !errors.IsNotFound(err) {
@@ -76,14 +92,9 @@ func CreateOrUpdate(ctx context.Context, c client.Client, obj client.Object) err
 	if obj == nil {
 		return fmt.Errorf("object to create or update must not be nil")
 	}
-	// key := client.ObjectKeyFromObject(obj)
-	key := types.NamespacedName{
-		Namespace: obj.GetNamespace(),
-		Name:      obj.GetName(),
-	}
 	// Check if the resource already exists
 	existingObj := obj.DeepCopyObject().(client.Object)
-	err := c.Get(ctx, key, existingObj)
+	err := c.Get(ctx, client.ObjectKeyFromObject(obj), existingObj)
 
 	switch {
 	case err == nil:
@@ -114,20 +125,36 @@ func ApplyResources(ctx context.Context, r client.Client, ins *databasev1.Mysql)
 		return ctrl.Result{}, err
 	}
 
+	if err := CreateOrUpdate(ctx, r, syncer.RouterConfigmap(ins)); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if err := CreateOrUpdate(ctx, r, syncer.MysqlStatefulset(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
+
+	log.Log.Info("Apply Resources sucess ")
 	return ctrl.Result{}, nil
 }
 
+func CreateRouter(ctx context.Context, r client.Client, ins *databasev1.Mysql) (ctrl.Result, error) {
+	log.Log.Info("create  router resource", "clusterspace", ins.Namespace, "clustername", ins.Name)
+
+	if err := CreateOrUpdate(ctx, r, syncer.RouterDeployment(ins)); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := CreateOrUpdate(ctx, r, syncer.RouterSVC(ins)); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	log.Log.Info("Create Routers sucess ")
+	return ctrl.Result{}, nil
+}
 func CreateCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) (ctrl.Result, error) {
 	//create innodb cluster
 	statefulSet := &appsv1.StatefulSet{}
-	key := types.NamespacedName{
-		Namespace: ins.GetNamespace(),
-		Name:      ins.GetName(),
-	}
-	if err := r.Get(ctx, key, statefulSet); err == nil {
+
+	if err := r.Get(ctx, client.ObjectKeyFromObject(ins), statefulSet); err == nil {
 
 		// 检查 StatefulSet 是否正常运行
 		if statefulSet.Status.ReadyReplicas == statefulSet.Status.Replicas &&

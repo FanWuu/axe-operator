@@ -84,7 +84,7 @@ func mysqlContainers(ins *databasev1.Mysql) []corev1.Container {
 				},
 				{
 					Name:          "gr-xcom",
-					ContainerPort: 33061,
+					ContainerPort: 33062,
 				},
 			},
 			Env: env(ins),

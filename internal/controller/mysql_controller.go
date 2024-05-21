@@ -90,18 +90,16 @@ func (r *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	// apply resources
-	if _, err := ApplyResources(ctx, r.Client, ins); err == nil {
-		log.Log.Info("Apply Resources sucess ")
-	} else {
+	if _, err := ApplyResources(ctx, r.Client, ins); err != nil {
 		log.Log.Error(err, "Apply Resources failed ")
 		return ctrl.Result{}, err
 	}
 
 	// create cluster
-	if _, err := CreateCluster(ctx, r.Client, ins); err != nil {
-		log.Log.Error(err, "create cluster failed ")
-		return ctrl.Result{}, err
-	}
+	// if _, err := CreateCluster(ctx, r.Client, ins); err != nil {
+	// 	log.Log.Error(err, "create cluster failed ")
+	// 	return ctrl.Result{}, err
+	// }
 
 	// update lables
 	//fix the error : "the object has been modified; please apply your changes to the latest version and try again"
@@ -117,6 +115,12 @@ func (r *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			return ctrl.Result{}, err
 		}
 		log.Log.Info("update statefulset lable MGR_INSTALLED")
+	}
+
+	//TODO create router deployment
+	if _, err := CreateRouter(ctx, r.Client, ins); err != nil {
+		log.Log.Error(err, "create router failed ")
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil

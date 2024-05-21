@@ -58,9 +58,9 @@ type MysqlSpec struct {
 	Replica int32 `json:"replica,omitempty"`
 
 	// +optional
-	// +kubebuilder:default:={RouterImage:"mysql-router:8.0.32",replica:1}
 	Router RouterOpts `json:"router,omitempty"`
 
+	// +optional
 	Mysql MysqlOpts `json:"mysql,omitempty"`
 
 	// +optional
@@ -108,7 +108,7 @@ type RouterOpts struct {
 
 	// The mysql-router image.
 	// +optional
-	// +kubebuilder:default:="mysql-router:8.0.32"
+	// +kubebuilder:default:="mysql/mysql-router:latest"
 	RouterImage string `json:"RouterImage,omitempty"`
 
 	// +optional
@@ -131,7 +131,7 @@ type RouterOpts struct {
 	// The key/value pairs is persisted in the configmap.
 	// Delete key is not valid, it is recommended to edit the configmap directly.
 	// +optional
-	RouterConf MysqlConf `json:"mysqlConf,omitempty"`
+	RouterConf RouterConf `json:"mysqlConf,omitempty"`
 }
 
 const (

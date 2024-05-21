@@ -1189,12 +1189,9 @@ spec:
                 format: int32
                 type: integer
               router:
-                default:
-                  RouterImage: mysql-router:8.0.32
-                  replica: 1
                 properties:
                   RouterImage:
-                    default: mysql-router:8.0.32
+                    default: mysql/mysql-router:latest
                     description: The mysql-router image.
                     type: string
                   mysqlConf:

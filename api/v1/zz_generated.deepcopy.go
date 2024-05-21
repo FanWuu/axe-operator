@@ -237,7 +237,7 @@ func (in *RouterOpts) DeepCopyInto(out *RouterOpts) {
 	in.Resources.DeepCopyInto(&out.Resources)
 	if in.RouterConf != nil {
 		in, out := &in.RouterConf, &out.RouterConf
-		*out = make(MysqlConf, len(*in))
+		*out = make(RouterConf, len(*in))
 		for key, val := range *in {
 			(*out)[key] = val
 		}

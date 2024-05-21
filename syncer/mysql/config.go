@@ -5,6 +5,7 @@ const (
 	Mgrinstalled    = "MGR_INSTALLED"
 	MgrISinstall    = "MGR_IS_INSTALL"
 	MYSQLAPP        = "mysql"
+	MYSQLROUTERAPP  = "mysql-router"
 )
 
 var mysqlConfigData = `
@@ -114,6 +115,89 @@ loose-group_replication_exit_state_action = READ_ONLY
 loose-group_replication_flow_control_mode = "DISABLED"
 `
 
+// mysqlrouter.conf
 var RouterConf = `
+[DEFAULT]
+max_total_connections = 10240
+logging_folder=
+runtime_folder=/tmp/mysqlrouter/run
+data_folder=/tmp/mysqlrouter/data
+keyring_path=/tmp/mysqlrouter/data/keyring
+master_key_path=/tmp/mysqlrouter/mysqlrouter.key
+connect_timeout=5
+read_timeout=30
+dynamic_state=/tmp/mysqlrouter/data/state.json
+client_ssl_cert=/tmp/mysqlrouter/data/router-cert.pem
+client_ssl_key=/tmp/mysqlrouter/data/router-key.pem
+client_ssl_mode=PREFERRED
+server_ssl_mode=AS_CLIENT
+server_ssl_verify=DISABLED
+unknown_config_option=warning
+
+[logger]
+level=INFO
+
+[metadata_cache:bootstrap]
+cluster_type=gr
+router_id=2
+user=root
+metadata_cluster=mgr
+ttl=0.5
+auth_cache_ttl=-1
+auth_cache_refresh_interval=2
+use_gr_notifications=0
+
+[routing:bootstrap_rw]
+bind_address=0.0.0.0
+bind_port=6446
+destinations=metadata-cache://mgr/?role=PRIMARY
+routing_strategy=first-available
+protocol=classic
+
+[routing:bootstrap_ro]
+bind_address=0.0.0.0
+bind_port=6447
+destinations=metadata-cache://mgr/?role=SECONDARY
+routing_strategy=round-robin-with-fallback
+protocol=classic
+
+[routing:bootstrap_x_rw]
+bind_address=0.0.0.0
+bind_port=6448
+destinations=metadata-cache://mgr/?role=PRIMARY
+routing_strategy=first-available
+protocol=x
+
+[routing:bootstrap_x_ro]
+bind_address=0.0.0.0
+bind_port=6449
+destinations=metadata-cache://mgr/?role=SECONDARY
+routing_strategy=round-robin-with-fallback
+protocol=x
+
+[http_server]
+port=8443
+ssl=1
+ssl_cert=/tmp/mysqlrouter/data/router-cert.pem
+ssl_key=/tmp/mysqlrouter/data/router-key.pem
+
+[http_auth_realm:default_auth_realm]
+backend=default_auth_backend
+method=basic
+name=default_realm
+
+[rest_router]
+require_realm=default_auth_realm
+
+[rest_api]
+
+[http_auth_backend:default_auth_backend]
+backend=metadata_cache
+
+[rest_routing]
+require_realm=default_auth_realm
+
+[rest_metadata_cache]
+require_realm=default_auth_realm
 
 `

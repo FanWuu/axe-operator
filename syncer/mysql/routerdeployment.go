@@ -8,10 +8,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+//  docker run \
+//   -e MYSQL_HOST=localhost \
+//   -e MYSQL_PORT=3306 \
+//   -e MYSQL_USER=mysql \
+//   -e MYSQL_PASSWORD=mysql \
+//   -e MYSQL_INNODB_CLUSTER_MEMBERS=3 \
+//   -e MYSQL_ROUTER_BOOTSTRAP_EXTRA_OPTIONS="--conf-use-socket --conf-use-gr-notification"
+//   -ti container-registry.oracle.com/mysql/community-router
+
+//	func clusterHost(ins *databasev1.Mysql) string {
+//		clusterHost := ""
+//		// for i := 0; i < int(ins.Spec.Replica); i++ {
+//		// 	clusterHost = clusterHost + ins.Name + "-" + strconv.Itoa(i) + "." + ins.Name + "." + ins.Namespace + ".svc.cluster.local:3306:"
+//		// }
+//		clusterHost = clusterHost + ins.Name + "-" + strconv.Itoa(0) + "." + ins.Name + "." + ins.Namespace + ".svc.cluster.local"
+//		return clusterHost
+//	}
 func Routercontainer(ins *databasev1.Mysql) []corev1.Container {
 	return []corev1.Container{
 		{
-			Name:            "mysql-router",
+			Name:            ins.Name + "-router",
 			Image:           ins.Spec.Router.RouterImage,
 			ImagePullPolicy: ins.Spec.PodPolicy.ImagePullPolicy,
 			Ports: []corev1.ContainerPort{
@@ -20,11 +37,17 @@ func Routercontainer(ins *databasev1.Mysql) []corev1.Container {
 					ContainerPort: 6446,
 				},
 			},
+			VolumeMounts: []corev1.VolumeMount{
+				{
+					Name:      ins.Name + "-router",
+					MountPath: "/etc/mysqlrouter",
+				},
+			},
 			// 设置必要的环境变量
 			Env: []corev1.EnvVar{
 				{
 					Name:  "MYSQL_HOST",
-					Value: "mysql-service", // 假设MySQL服务名为mysql-service
+					Value: ins.Name + "." + ins.Namespace + ".svc.cluster.local",
 				},
 				{
 					Name:  "MYSQL_PORT",
@@ -35,8 +58,20 @@ func Routercontainer(ins *databasev1.Mysql) []corev1.Container {
 					Value: "root",
 				},
 				{
+					Name:  "MYSQL_CREATE_ROUTER_USER",
+					Value: "0",
+				},
+				{
 					Name:  "MYSQL_PASSWORD",
-					Value: ins.Spec.Mysql.RootPassword, // 设置一个强密码，实际使用时应通过安全的方式传递
+					Value: ins.Spec.Mysql.RootPassword,
+				},
+				{
+					Name:  "MYSQL_INNODB_CLUSTER_MEMBERS",
+					Value: "3",
+				},
+				{
+					Name:  "MYSQL_ROUTER_BOOTSTRAP_EXTRA_OPTIONS",
+					Value: "--conf-set-option=DEFAULT.unknown_config_option=warning",
 				},
 				// 添加其他必要的环境变量
 			},
@@ -44,6 +79,8 @@ func Routercontainer(ins *databasev1.Mysql) []corev1.Container {
 	}
 }
 
+// TODO 需要添加修改配置文件的功能，主要是为了修改max_connection，
+// 也可以其多个服务，独立提供访问
 func RouterDeployment(ins *databasev1.Mysql) *appsv1.Deployment {
 	if ins == nil || ins.Spec.Replica < 0 {
 		// 在实际场景中，应该处理这个错误，比如返回一个错误或记录日志
@@ -52,8 +89,12 @@ func RouterDeployment(ins *databasev1.Mysql) *appsv1.Deployment {
 	replicas := ins.Spec.Router.Replica
 
 	RouterDeployment := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: "apps/v1",
+		},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "mysql-router",
+			Name:      ins.Name + "-router",
 			Namespace: ins.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -73,6 +114,18 @@ func RouterDeployment(ins *databasev1.Mysql) *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					Containers: Routercontainer(ins),
+					Volumes: []corev1.Volume{
+						{
+							Name: ins.Name + "-router",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: ins.Name + "-router",
+									},
+								},
+							},
+						},
+					},
 				},
 			},
 		},

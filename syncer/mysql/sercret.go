@@ -9,7 +9,10 @@ import (
 
 func mysqlsecret(ins *databasev1.Mysql) []corev1.Secret {
 	return []corev1.Secret{
-		{
+		{TypeMeta: metav1.TypeMeta{
+			Kind:       "Secret",
+			APIVersion: "v1",
+		},
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      ins.Name,
 				Namespace: ins.Namespace,

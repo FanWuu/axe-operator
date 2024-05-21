@@ -58,11 +58,11 @@ func pingMySQ(host string, passwd string) bool {
 	for attempt < 50 {
 		err := db.PingContext(context.Background())
 		if err == nil {
-			log.Log.Info("Ping attempt success ")
+			log.Log.Info("Ping attempt success ", "host:", host)
 			return true
 		}
 		// 如果发生错误，打印错误信息并等待一段时间重试
-		log.Log.Info("Ping attempt failed try latter ")
+		log.Log.Info("Ping attempt failed try latter ", "host:", host)
 		time.Sleep(time.Second * 2)
 		attempt++
 	}
@@ -88,7 +88,7 @@ func CreateMGR(ctx context.Context, ins *databasev1.Mysql) error {
 		}
 
 		if i == 0 {
-			// TODO  if cluster status is ok return nil
+			// if cluster status is ok return nil
 			cmd := `/usr/bin/mysqlsh -uroot -p` + passwd + ` -h` + host + ` --cluster  -e "print(cluster.status())"`
 			if err, _ := ExeCmd(cmd); err == nil {
 				log.Log.Info("cluster is ready")
