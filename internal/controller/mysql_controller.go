@@ -96,10 +96,10 @@ func (r *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 
 	// create cluster
-	// if _, err := CreateCluster(ctx, r.Client, ins); err != nil {
-	// 	log.Log.Error(err, "create cluster failed ")
-	// 	return ctrl.Result{}, err
-	// }
+	if _, err := CreateCluster(ctx, r.Client, ins); err != nil {
+		log.Log.Error(err, "create cluster failed ")
+		return ctrl.Result{}, err
+	}
 
 	// update lables
 	//fix the error : "the object has been modified; please apply your changes to the latest version and try again"
