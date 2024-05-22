@@ -2,6 +2,8 @@
 innodb cluster operator 
 
 ![operator](https://github.com/FanWuu/axe-operator/blob/master/doc/cluster.png)
+![operator](https://github.com/FanWuu/axe-operator/blob/master/doc/resource.png)
+![operator](https://github.com/FanWuu/axe-operator/blob/master/doc/logs.png)
 
 ## Description
 // TODO(user): An in-depth paragraph about your project and overview of use

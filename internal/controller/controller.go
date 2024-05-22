@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/presslabs/controller-util/pkg/meta"
 	appsv1 "k8s.io/api/apps/v1"
@@ -153,6 +154,7 @@ func CreateRouter(ctx context.Context, r client.Client, ins *databasev1.Mysql) (
 func CreateCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) (ctrl.Result, error) {
 	//create innodb cluster
 	statefulSet := &appsv1.StatefulSet{}
+	time.Sleep(10 * time.Second)
 
 	if err := r.Get(ctx, client.ObjectKeyFromObject(ins), statefulSet); err == nil {
 
@@ -179,7 +181,11 @@ func CreateCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) 
 			return ctrl.Result{}, nil
 
 		} else {
-			log.Log.Error(err, "StatefulSet is not running normally ", statefulSet)
+			log.Log.Error(err, "StatefulSet is not running normally ")
+			log.Log.Info("StatefulSet is not running normally", "ReadyReplicas:", statefulSet.Status.ReadyReplicas, "Replicas", statefulSet.Status.Replicas)
+			log.Log.Info("StatefulSet is not running normally", "CurrentRevision:", statefulSet.Status.CurrentRevision, "UpdateRevision", statefulSet.Status.UpdateRevision)
+			log.Log.Info("StatefulSet is not running normally", "clusterstatus:", statefulSet.ObjectMeta.Labels["clusterstatus"])
+
 			return ctrl.Result{}, err
 		}
 

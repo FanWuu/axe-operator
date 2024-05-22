@@ -37,12 +37,6 @@ func Routercontainer(ins *databasev1.Mysql) []corev1.Container {
 					ContainerPort: 6446,
 				},
 			},
-			VolumeMounts: []corev1.VolumeMount{
-				{
-					Name:      ins.Name + "-router",
-					MountPath: "/etc/mysqlrouter",
-				},
-			},
 			// 设置必要的环境变量
 			Env: []corev1.EnvVar{
 				{
@@ -70,8 +64,10 @@ func Routercontainer(ins *databasev1.Mysql) []corev1.Container {
 					Value: "3",
 				},
 				{
+					//https://dev.mysql.com/doc/mysql-router/8.3/en/mysql-router-installation-docker.html
+					//https://github.com/mysql/mysql-operator/blob/trunk/mysqloperator/controller/innodbcluster/router_objects.py
 					Name:  "MYSQL_ROUTER_BOOTSTRAP_EXTRA_OPTIONS",
-					Value: "--conf-set-option=DEFAULT.unknown_config_option=warning",
+					Value: "--conf-set-option=DEFAULT.unknown_config_option=warning --conf-set-option=DEFAULT.max_total_connections=10240 ",
 				},
 				// 添加其他必要的环境变量
 			},
@@ -79,7 +75,6 @@ func Routercontainer(ins *databasev1.Mysql) []corev1.Container {
 	}
 }
 
-// TODO 需要添加修改配置文件的功能，主要是为了修改max_connection，
 // 也可以其多个服务，独立提供访问
 func RouterDeployment(ins *databasev1.Mysql) *appsv1.Deployment {
 	if ins == nil || ins.Spec.Replica < 0 {
@@ -114,18 +109,6 @@ func RouterDeployment(ins *databasev1.Mysql) *appsv1.Deployment {
 				},
 				Spec: corev1.PodSpec{
 					Containers: Routercontainer(ins),
-					Volumes: []corev1.Volume{
-						{
-							Name: ins.Name + "-router",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: ins.Name + "-router",
-									},
-								},
-							},
-						},
-					},
 				},
 			},
 		},

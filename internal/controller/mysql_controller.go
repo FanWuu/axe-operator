@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/presslabs/controller-util/pkg/meta"
@@ -114,6 +115,7 @@ func (r *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			log.Log.Error(err, "update statefulset lables failed")
 			return ctrl.Result{}, err
 		}
+		time.Sleep(3 * time.Second)
 		log.Log.Info("update statefulset lable MGR_INSTALLED")
 	}
 
