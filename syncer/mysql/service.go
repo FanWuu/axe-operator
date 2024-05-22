@@ -33,6 +33,16 @@ func MysqlHeadlesSVC(ins *databasev1.Mysql) *corev1.Service {
 					Port:     3306,
 					Protocol: corev1.ProtocolTCP,
 				},
+				{
+					Name:     "mysqlx",
+					Port:     33060,
+					Protocol: corev1.ProtocolTCP,
+				},
+				{
+					Name:     "gr-xcom",
+					Port:     33062,
+					Protocol: corev1.ProtocolTCP,
+				},
 			},
 		},
 	}
@@ -65,11 +75,13 @@ func MysqlClusterSVC(ins *databasev1.Mysql) *corev1.Service {
 					Protocol: corev1.ProtocolTCP,
 				},
 				{
-					Port:     3306,
+					Name:     "mysqlx",
+					Port:     33060,
 					Protocol: corev1.ProtocolTCP,
 				},
 				{
-					Port:     3306,
+					Name:     "gr-xcom",
+					Port:     33062,
 					Protocol: corev1.ProtocolTCP,
 				},
 			},
@@ -99,9 +111,15 @@ func RouterSVC(ins *databasev1.Mysql) *corev1.Service {
 			Selector: labels,
 			Ports: []corev1.ServicePort{
 				{
-					Name:       "mysql-router",
+					Name:       "mysql-router-rw",
 					Port:       6446,
 					TargetPort: intstr.FromInt(6446),
+					Protocol:   corev1.ProtocolTCP,
+				},
+				{
+					Name:       "mysql-router-ro",
+					Port:       6447,
+					TargetPort: intstr.FromInt(6447),
 					Protocol:   corev1.ProtocolTCP,
 				},
 			},
