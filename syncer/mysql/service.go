@@ -49,48 +49,7 @@ func MysqlHeadlesSVC(ins *databasev1.Mysql) *corev1.Service {
 	return svc
 }
 
-func MysqlClusterSVC(ins *databasev1.Mysql) *corev1.Service {
-	labels := map[string]string{
-		"clustername": ins.Name,
-		"app":         MYSQLAPP,
-	}
-
-	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ins.Name,
-			Namespace: ins.Namespace,
-			Labels:    labels,
-		},
-		Spec: corev1.ServiceSpec{
-			ClusterIP: "None",
-			Selector:  labels,
-			Ports: []corev1.ServicePort{
-				{
-					Name:     "mysql",
-					Port:     3306,
-					Protocol: corev1.ProtocolTCP,
-				},
-				{
-					Name:     "mysqlx",
-					Port:     33060,
-					Protocol: corev1.ProtocolTCP,
-				},
-				{
-					Name:     "gr-xcom",
-					Port:     33062,
-					Protocol: corev1.ProtocolTCP,
-				},
-			},
-		},
-	}
-	return svc
-}
-
-func RouterSVC(ins *databasev1.Mysql) *corev1.Service {
+func RouterClusterSVC(ins *databasev1.Mysql) *corev1.Service {
 	labels := map[string]string{
 		"clustername": ins.Name,
 		"app":         MYSQLROUTERAPP,
@@ -119,6 +78,44 @@ func RouterSVC(ins *databasev1.Mysql) *corev1.Service {
 				{
 					Name:       "mysql-router-ro",
 					Port:       6447,
+					TargetPort: intstr.FromInt(6447),
+					Protocol:   corev1.ProtocolTCP,
+				},
+			},
+		},
+	}
+	return svc
+}
+
+func RouterNodeSVC(ins *databasev1.Mysql) *corev1.Service {
+	labels := map[string]string{
+		"clustername": ins.Name,
+		"app":         MYSQLROUTERAPP,
+	}
+
+	svc := &corev1.Service{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      ins.Name + "-router-node",
+			Namespace: ins.Namespace,
+			Labels:    labels,
+		},
+		Spec: corev1.ServiceSpec{
+			Type:     corev1.ServiceTypeNodePort,
+			Selector: labels,
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "mysql-router-rw",
+					Port:       31001,
+					TargetPort: intstr.FromInt(6446),
+					Protocol:   corev1.ProtocolTCP,
+				},
+				{
+					Name:       "mysql-router-ro",
+					Port:       31002,
 					TargetPort: intstr.FromInt(6447),
 					Protocol:   corev1.ProtocolTCP,
 				},

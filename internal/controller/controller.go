@@ -63,6 +63,16 @@ func (r *MysqlReconciler) cleanupRelatedResources(ctx context.Context, ins *data
 		return fmt.Errorf("failed to get Service %s: %w", ins.Name, err)
 	}
 
+	// cleanup router Service
+	svc = &corev1.Service{}
+	if err := r.Get(ctx, types.NamespacedName{Name: ins.Name + "-router-node", Namespace: ins.Namespace}, svc); err == nil {
+		if err := r.Delete(ctx, svc); err != nil {
+			return fmt.Errorf("failed to delete Service %s: %w", ins.Name, err)
+		}
+	} else if !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to get Service %s: %w", ins.Name, err)
+	}
+
 	// cleanup deployment
 	deploy := &appsv1.Deployment{}
 	if err := r.Get(ctx, types.NamespacedName{Name: ins.Name + "-router", Namespace: ins.Namespace}, deploy); err == nil {
@@ -144,10 +154,12 @@ func CreateRouter(ctx context.Context, r client.Client, ins *databasev1.Mysql) (
 	if err := CreateOrUpdate(ctx, r, syncer.RouterDeployment(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := CreateOrUpdate(ctx, r, syncer.RouterSVC(ins)); err != nil {
+	if err := CreateOrUpdate(ctx, r, syncer.RouterClusterSVC(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
-
+	if err := CreateOrUpdate(ctx, r, syncer.RouterNodeSVC(ins)); err != nil {
+		return ctrl.Result{}, err
+	}
 	log.Log.Info("Create Routers sucess ")
 	return ctrl.Result{}, nil
 }

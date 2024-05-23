@@ -96,7 +96,7 @@ func (r *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		return ctrl.Result{}, err
 	}
 
-	// create cluster
+	// // create cluster
 	if _, err := CreateCluster(ctx, r.Client, ins); err != nil {
 		log.Log.Error(err, "create cluster failed ")
 		return ctrl.Result{}, err
