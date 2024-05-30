@@ -71,18 +71,21 @@ func VolumeTmp(ins *databasev1.Mysql) []corev1.PersistentVolumeClaim {
 	return []corev1.PersistentVolumeClaim{
 		{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: "mysql-data",
+				Name:      "mysql-data",
+				Namespace: ins.Namespace,
+				Labels: map[string]string{
+					"app":         databasev1.MYSQLAPP,
+					"clustername": ins.Name,
+				},
 			},
 			Spec: corev1.PersistentVolumeClaimSpec{
-				AccessModes: []corev1.PersistentVolumeAccessMode{
-					corev1.ReadWriteOnce,
-				},
+				AccessModes: ins.Spec.Persistence.AccessModes,
 				Resources: corev1.VolumeResourceRequirements{
 					Requests: corev1.ResourceList{
-						corev1.ResourceStorage: resource.MustParse("10Gi"),
+						corev1.ResourceStorage: resource.MustParse(ins.Spec.Persistence.Size),
 					},
 				},
-				StorageClassName: &ins.Spec.PodPolicy.StorageClassName,
+				StorageClassName: &ins.Spec.Persistence.StorageClass,
 			},
 		},
 	}
@@ -134,6 +137,8 @@ func MysqlStatefulset(ins *databasev1.Mysql) *appsv1.StatefulSet {
 		// 在实际场景中，应该处理这个错误，比如返回一个错误或记录日志
 		return nil
 	}
+
+	var DirectoryOrCreate corev1.HostPathType = corev1.HostPathDirectoryOrCreate
 
 	lables := map[string]string{
 		"clustername": ins.Name,
@@ -193,7 +198,7 @@ func MysqlStatefulset(ins *databasev1.Mysql) *appsv1.StatefulSet {
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
 									Path: "/data/mysql/" + ins.Namespace + "/" + ins.Name,
-									// Type: &corev1.HostPathDirectoryOrCreate,
+									Type: &DirectoryOrCreate,
 								},
 							},
 						},

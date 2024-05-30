@@ -1,6 +1,14 @@
 package syncer
 
-var mysqlConfigData = `
+import (
+	databasev1 "axe/api/v1"
+	"math"
+	"strconv"
+)
+
+func mysqlcnf(ins *databasev1.Mysql) string {
+	mem := int(math.Round(float64(ins.Spec.Mysql.Resources.Limits.Memory().Value()) * 0.8))
+	mycnf := `
 [mysqld]
 user    = mysql
 port    = 3306
@@ -68,7 +76,8 @@ loose-parallel_max_threads = 64
 loose-parallel_memory_limit = 12G
 
 #innodb settings
-innodb_buffer_pool_size = 16G
+#Buffer pool size must always be equal to or a multiple of innodb_buffer_pool_chunk_size * innodb_buffer_pool_instances.
+innodb_buffer_pool_size = ` + strconv.Itoa(mem) + `
 innodb_buffer_pool_instances = 8
 innodb_data_file_path = ibdata1:12M:autoextend
 innodb_flush_log_at_trx_commit = 1
@@ -94,8 +103,11 @@ innodb_status_file = 1
 innodb_status_output = 0
 innodb_status_output_locks = 1
 innodb_sort_buffer_size = 64M
+   
+   `
 
-`
+	return mycnf
+}
 
 var PluginConfdata = `
 [mysqld]

@@ -63,10 +63,6 @@ spec:
             properties:
               mysql:
                 properties:
-                  image:
-                    default: mysql:8.0.32
-                    description: The mysql image.
-                    type: string
                   mysqlConf:
                     additionalProperties:
                       type: string
@@ -80,6 +76,10 @@ spec:
                       MysqlConfTemplate is the configmap name of the template for mysql config.
                       The configmap should contain the keys `mysql.cnf` and `plugin.cnf` at least, key `init.sql` is optional.
                       If empty, operator will generate a default template named <spec.metadata.name>-mysql.
+                    type: string
+                  mysqlimage:
+                    default: mysql:8.0.32
+                    description: The mysql image.
                     type: string
                   pluginConf:
                     additionalProperties:
@@ -96,10 +96,10 @@ spec:
                   resources:
                     default:
                       limits:
-                        cpu: 500m
-                        memory: 1Gi
+                        cpu: 2048m
+                        memory: 2Gi
                       requests:
-                        cpu: 100m
+                        cpu: 1024m
                         memory: 256Mi
                     description: The compute resource requirements.
                     properties:
@@ -159,6 +159,34 @@ spec:
                     type: string
                 required:
                 - rootPassword
+                type: object
+              persistence:
+                description: |-
+                  Persistence is the desired spec for storing mysql data. Only one of its
+                  members may be specified.
+                properties:
+                  accessModes:
+                    default:
+                    - ReadWriteOnce
+                    description: |-
+                      AccessModes contains the desired access modes the volume should have.
+                      More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+                    items:
+                      type: string
+                    type: array
+                  enabled:
+                    default: true
+                    description: Create a volume to store data.
+                    type: boolean
+                  size:
+                    default: 10Gi
+                    description: Size of persistent volume claim.
+                    type: string
+                  storageClass:
+                    description: |-
+                      Name of the StorageClass required by the claim.
+                      More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+                    type: string
                 type: object
               podpolicy:
                 default:
@@ -1190,10 +1218,6 @@ spec:
                 type: integer
               router:
                 properties:
-                  RouterImage:
-                    default: mysql/mysql-router:latest
-                    description: The mysql-router image.
-                    type: string
                   mysqlConf:
                     additionalProperties:
                       type: string
@@ -1220,10 +1244,10 @@ spec:
                   resources:
                     default:
                       limits:
-                        cpu: 500m
-                        memory: 1Gi
+                        cpu: 2048m
+                        memory: 2Gi
                       requests:
-                        cpu: 100m
+                        cpu: 1024m
                         memory: 256Mi
                     description: The compute resource requirements.
                     properties:
@@ -1279,6 +1303,10 @@ spec:
                           More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
                         type: object
                     type: object
+                  routerimage:
+                    default: mysql/mysql-router:latest
+                    description: The mysql-router image.
+                    type: string
                 type: object
             type: object
           status:
