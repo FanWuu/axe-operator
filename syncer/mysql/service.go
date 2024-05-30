@@ -11,7 +11,7 @@ import (
 func MysqlHeadlesSVC(ins *databasev1.Mysql) *corev1.Service {
 	labels := map[string]string{
 		"clustername": ins.Name,
-		"app":         MYSQLAPP,
+		"app":         databasev1.MYSQLAPP,
 	}
 
 	svc := &corev1.Service{
@@ -52,7 +52,7 @@ func MysqlHeadlesSVC(ins *databasev1.Mysql) *corev1.Service {
 func RouterClusterSVC(ins *databasev1.Mysql) *corev1.Service {
 	labels := map[string]string{
 		"clustername": ins.Name,
-		"app":         MYSQLROUTERAPP,
+		"app":         databasev1.MYSQLROUTERAPP,
 	}
 
 	svc := &corev1.Service{
@@ -90,7 +90,7 @@ func RouterClusterSVC(ins *databasev1.Mysql) *corev1.Service {
 func RouterNodeSVC(ins *databasev1.Mysql) *corev1.Service {
 	labels := map[string]string{
 		"clustername": ins.Name,
-		"app":         MYSQLROUTERAPP,
+		"app":         databasev1.MYSQLROUTERAPP,
 	}
 
 	svc := &corev1.Service{

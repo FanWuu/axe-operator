@@ -14,23 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// TODO
-// 方案一  kubectl exec -it mysql-0 -n mysql -- mysql -uroot -p  方式初始化集群
-// 方案二  使用initcontainer方式初始化集群 需要自定义一个container ，在mysql 镜像的基础上打包sider代码
-// 代码逻辑 1. 判断pod index 如果自己是最后一个 则去前面的节点创建集群，完成后退出
-// 问题的关键点  最后一个节点如何在initcontainer 退出前加入集群
-
-// 方案三  operator manager container 中集成 mysql shell 直接本地调用mysqlsh createcluster , addinstance
-
-// 1. 检查statefulset.status == running && lables.clusterstatus== uninit pod数量大于等于3 则执行创建集群操作
-// 2. 创建集群操作
-// 3. 添加实例操作
-// 4. 删除实例操作
-// 5. 扩容操作
-// 6. 缩容操作
-// 7. 升级操作
-// 完成以上操作后修改标签状态
-func ExeCmd(cmd string) (error, string) {
+func ExeCmd(cmd string) (string, error) {
 	//TODO CHECK ERROR RESULT
 	c := exec.Command("sh", "-c", cmd)
 	var out bytes.Buffer
@@ -41,10 +25,10 @@ func ExeCmd(cmd string) (error, string) {
 	log.Log.Info("exec", " cmd :", cmd)
 	if err != nil {
 		log.Log.Info(fmt.Sprint(err) + ": " + stderr.String())
-		return err, stderr.String()
+		return stderr.String(), err
 	}
 	log.Log.Info("Result: " + out.String())
-	return nil, out.String()
+	return out.String(), nil
 }
 
 func pingMySQ(host string, passwd string) bool {
@@ -83,26 +67,26 @@ func CreateMGR(ctx context.Context, ins *databasev1.Mysql) error {
 
 		if !pingMySQ(host, passwd) {
 			// TODO
-			log.Log.Info("mysql is not ready", "host:", host)
+			log.Log.Info("mysql is not ready", "host", host)
 			return fmt.Errorf("mysql is not ready")
 		}
 
 		if i == 0 {
 			// if cluster status is ok return nil
 			cmd := `/usr/bin/mysqlsh -uroot -p` + passwd + ` -h` + host + ` --cluster  -e "print(cluster.status())"`
-			if err, _ := ExeCmd(cmd); err == nil {
+			if _, err := ExeCmd(cmd); err == nil {
 				log.Log.Info("cluster is ready")
 				return nil
 			}
 			// else create cluster
-			log.Log.Info("create innodb cluster", "host:", host)
+			log.Log.Info("create innodb cluster", "host", host)
 
 			cmd = `echo Y |/usr/bin/mysqlsh -uroot -p` + passwd + ` -h` + host + ` -e "dba.createCluster('mgr')"`
 			ExeCmd(cmd)
 		} else {
 			// 添加节点
 
-			log.Log.Info("add instance to cluster", "host:", host)
+			log.Log.Info("add instance to cluster", "host", host)
 			cmd := `echo C |/usr/bin/mysqlsh -uroot -p` + passwd + ` -h` + host0 + ` --cluster -e "cluster.addInstance('root@` + host + `:3306')"`
 			ExeCmd(cmd)
 

@@ -7,7 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func mysqlsecret(ins *databasev1.Mysql) []corev1.Secret {
+func Mysqlsecret(ins *databasev1.Mysql) []corev1.Secret {
 	return []corev1.Secret{
 		{TypeMeta: metav1.TypeMeta{
 			Kind:       "Secret",
@@ -18,7 +18,7 @@ func mysqlsecret(ins *databasev1.Mysql) []corev1.Secret {
 				Namespace: ins.Namespace,
 			},
 			Data: map[string][]byte{
-				"passwd": []byte("1234"),
+				"rootpasswd": []byte(ins.Spec.Mysql.RootPassword),
 			},
 		},
 	}

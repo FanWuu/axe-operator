@@ -3,13 +3,12 @@ package controller
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"time"
 
 	"github.com/presslabs/controller-util/pkg/meta"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
-	"k8s.io/apimachinery/pkg/api/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -39,7 +38,7 @@ func (r *MysqlReconciler) cleanupRelatedResources(ctx context.Context, ins *data
 		if err := r.Delete(ctx, statefulSet); err != nil {
 			return fmt.Errorf("failed to delete StatefulSet %s: %w", ins.Name, err)
 		}
-	} else if !errors.IsNotFound(err) {
+	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to get StatefulSet %s: %w", ins.Name, err)
 	}
 
@@ -49,7 +48,7 @@ func (r *MysqlReconciler) cleanupRelatedResources(ctx context.Context, ins *data
 		if err := r.Delete(ctx, svc); err != nil {
 			return fmt.Errorf("failed to delete Service %s: %w", ins.Name, err)
 		}
-	} else if !errors.IsNotFound(err) {
+	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to get Service %s: %w", ins.Name, err)
 	}
 
@@ -59,7 +58,7 @@ func (r *MysqlReconciler) cleanupRelatedResources(ctx context.Context, ins *data
 		if err := r.Delete(ctx, svc); err != nil {
 			return fmt.Errorf("failed to delete Service %s: %w", ins.Name, err)
 		}
-	} else if !errors.IsNotFound(err) {
+	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to get Service %s: %w", ins.Name, err)
 	}
 
@@ -69,7 +68,7 @@ func (r *MysqlReconciler) cleanupRelatedResources(ctx context.Context, ins *data
 		if err := r.Delete(ctx, svc); err != nil {
 			return fmt.Errorf("failed to delete Service %s: %w", ins.Name, err)
 		}
-	} else if !errors.IsNotFound(err) {
+	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to get Service %s: %w", ins.Name, err)
 	}
 
@@ -79,7 +78,7 @@ func (r *MysqlReconciler) cleanupRelatedResources(ctx context.Context, ins *data
 		if err := r.Delete(ctx, deploy); err != nil {
 			return fmt.Errorf("failed to delete Service %s: %w", ins.Name, err)
 		}
-	} else if !errors.IsNotFound(err) {
+	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to get Service %s: %w", ins.Name, err)
 	}
 
@@ -90,7 +89,7 @@ func (r *MysqlReconciler) cleanupRelatedResources(ctx context.Context, ins *data
 		if err := r.Delete(ctx, configmap); err != nil {
 			return fmt.Errorf("failed to delete configmap %s: %w", configmap, err)
 		}
-	} else if !errors.IsNotFound(err) {
+	} else if !apierrors.IsNotFound(err) {
 		return fmt.Errorf("failed to get configmap %s: %w", configmap, err)
 	}
 
@@ -110,7 +109,7 @@ func CreateOrUpdate(ctx context.Context, c client.Client, obj client.Object) err
 	switch {
 	case err == nil:
 		// Resource exists, check for updates before updating
-		if equality.Semantic.DeepEqual(existingObj, obj) {
+		if reflect.DeepEqual(existingObj, obj) {
 			log.Log.Info("No changes detected, skipping update", "namespace", obj.GetNamespace(), "kind", obj.GetObjectKind(), "name", obj.GetName())
 			return nil
 		}
@@ -163,6 +162,7 @@ func CreateRouter(ctx context.Context, r client.Client, ins *databasev1.Mysql) (
 	log.Log.Info("Create Routers sucess ")
 	return ctrl.Result{}, nil
 }
+
 func CreateCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) (ctrl.Result, error) {
 	//create innodb cluster
 	statefulSet := &appsv1.StatefulSet{}
@@ -173,7 +173,7 @@ func CreateCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) 
 		// 检查 StatefulSet 是否正常运行
 		if statefulSet.Status.ReadyReplicas == statefulSet.Status.Replicas &&
 			statefulSet.Status.CurrentRevision == statefulSet.Status.UpdateRevision &&
-			statefulSet.ObjectMeta.Labels["clusterstatus"] == "MGR_NOT_INSTALLED" {
+			statefulSet.ObjectMeta.Labels["clusterstatus"] == databasev1.MgrNOTinstalled {
 			// dba.createcluster()
 			log.Log.Info("StatefulSet is running and innodb cluster lables MGR_NOT_INSTALLED")
 			if err := syncer.CreateMGR(ctx, ins); err == nil {
@@ -187,7 +187,7 @@ func CreateCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) 
 
 		} else if statefulSet.Status.ReadyReplicas == statefulSet.Status.Replicas &&
 			statefulSet.Status.CurrentRevision == statefulSet.Status.UpdateRevision &&
-			statefulSet.ObjectMeta.Labels["clusterstatus"] == "MGR_INSTALLED" {
+			statefulSet.ObjectMeta.Labels["clusterstatus"] == databasev1.MgrISinstall {
 			// innodb cluster has already installed
 			log.Log.Info("StatefulSet is running and innodb cluster lables MGR_INSTALLED")
 			return ctrl.Result{}, nil
@@ -201,7 +201,7 @@ func CreateCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) 
 			return ctrl.Result{}, err
 		}
 
-	} else if !errors.IsNotFound(err) {
+	} else if !apierrors.IsNotFound(err) {
 		log.Log.Error(err, "statefulset: ", ins.Name, "not fondun")
 	}
 	return ctrl.Result{}, nil

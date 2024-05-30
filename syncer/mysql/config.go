@@ -1,13 +1,5 @@
 package syncer
 
-const (
-	MgrNOTinstalled = "MGR_NOT_INSTALLED"
-	Mgrinstalled    = "MGR_INSTALLED"
-	MgrISinstall    = "MGR_IS_INSTALL"
-	MYSQLAPP        = "mysql"
-	MYSQLROUTERAPP  = "mysql-router"
-)
-
 var mysqlConfigData = `
 [mysqld]
 user    = mysql

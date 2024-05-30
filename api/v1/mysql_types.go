@@ -44,7 +44,36 @@ type Policy struct {
 	// +optional
 	// +kubebuilder:default:={requests: {cpu: "1", memory: "1Gi"}}
 	ExtraResources corev1.ResourceRequirements `json:"extraResources,omitempty"`
+	// +optional
+	// +kubebuilder:default:=""
+	StorageClassName string `json:"storageClassName,omitempty"`
 }
+
+// Persistence is the desired spec for storing mysql data. Only one of its
+// members may be specified.
+// TODO generate api code
+// type Persistence struct {
+// 	// Create a volume to store data.
+// 	// +optional
+// 	// +kubebuilder:default:=true
+// 	Enabled bool `json:"enabled,omitempty"`
+
+// 	// AccessModes contains the desired access modes the volume should have.
+// 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+// 	// +optional
+// 	// +kubebuilder:default:={"ReadWriteOnce"}
+// 	AccessModes []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
+
+// 	// Name of the StorageClass required by the claim.
+// 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+// 	// +optional
+// 	StorageClass *string `json:"storageClass,omitempty"`
+
+// 	// Size of persistent volume claim.
+// 	// +optional
+// 	// +kubebuilder:default:="10Gi"
+// 	Size string `json:"size,omitempty"`
+// }
 
 // MysqlSpec defines the desired state of Mysql
 type MysqlSpec struct {
@@ -100,7 +129,7 @@ type MysqlOpts struct {
 
 	// The compute resource requirements.
 	// +optional
-	// +kubebuilder:default:={limits: {cpu: "500m", memory: "1Gi"}, requests: {cpu: "100m", memory: "256Mi"}}
+	// +kubebuilder:default:={limits: {cpu: "2048m", memory: "2Gi"}, requests: {cpu: "1024m", memory: "256Mi"}}
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
@@ -118,7 +147,7 @@ type RouterOpts struct {
 
 	// The compute resource requirements.
 	// +optional
-	// +kubebuilder:default:={limits: {cpu: "500m", memory: "1Gi"}, requests: {cpu: "100m", memory: "256Mi"}}
+	// +kubebuilder:default:={limits: {cpu: "2048m", memory: "2Gi"}, requests: {cpu: "500m", memory: "64Mi"}}
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// MysqlConfTemplate is the configmap name of the template for mysql config.
@@ -164,6 +193,14 @@ const (
 	ConditionScaleIn string = "ScaleIn"
 	// ConditionScaleOut indicates whether the cluster replicas is increasing.
 	ConditionScaleOut string = "ScaleOut"
+)
+
+const (
+	MgrNOTinstalled string = "MGR_NOT_INSTALLED"
+	Mgrinstalled    string = "MGR_INSTALLED"
+	MgrISinstall    string = "MGR_IS_INSTALL"
+	MYSQLAPP        string = "mysql"
+	MYSQLROUTERAPP  string = "mysql-router"
 )
 
 const (

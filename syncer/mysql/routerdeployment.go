@@ -71,6 +71,7 @@ func Routercontainer(ins *databasev1.Mysql) []corev1.Container {
 				},
 				// 添加其他必要的环境变量
 			},
+			Resources: ins.Spec.Router.Resources,
 		},
 	}
 }

@@ -80,7 +80,7 @@ func (r *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		}
 	}
 
-	// TODO delete cr relation resource 例如 StatefulSet、Headless Service 等
+	// delete cr relation resource 例如 StatefulSet、Headless Service 等
 	if !ins.GetDeletionTimestamp().IsZero() {
 		log.Log.Info("mysql cluster is deleting", "clusterspace", ins.Namespace, "clustername", ins.Name)
 		if err := r.cleanupRelatedResources(ctx, ins); err != nil {
@@ -108,8 +108,8 @@ func (r *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	r.Get(ctx, req.NamespacedName, statefulSet)
 	if statefulSet.Status.ReadyReplicas == statefulSet.Status.Replicas &&
 		statefulSet.Status.CurrentRevision == statefulSet.Status.UpdateRevision &&
-		statefulSet.ObjectMeta.Labels["clusterstatus"] == "MGR_NOT_INSTALLED" {
-		statefulSet.ObjectMeta.Labels["clusterstatus"] = "MGR_INSTALLED"
+		statefulSet.ObjectMeta.Labels["clusterstatus"] == databasev1.MgrNOTinstalled {
+		statefulSet.ObjectMeta.Labels["clusterstatus"] = databasev1.Mgrinstalled
 
 		if err := r.Update(ctx, statefulSet); err != nil {
 			log.Log.Error(err, "update statefulset lables failed")
@@ -119,7 +119,7 @@ func (r *MysqlReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 		log.Log.Info("update statefulset lable MGR_INSTALLED")
 	}
 
-	//TODO create router deployment
+	// create router deployment
 	if _, err := CreateRouter(ctx, r.Client, ins); err != nil {
 		log.Log.Error(err, "create router failed ")
 		return ctrl.Result{}, err

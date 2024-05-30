@@ -6,6 +6,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -66,6 +67,27 @@ func InitContainers(ins *databasev1.Mysql) []corev1.Container {
 	}
 }
 
+func VolumeTmp(ins *databasev1.Mysql) []corev1.PersistentVolumeClaim {
+	return []corev1.PersistentVolumeClaim{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "mysql-data",
+			},
+			Spec: corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{
+					corev1.ReadWriteOnce,
+				},
+				Resources: corev1.VolumeResourceRequirements{
+					Requests: corev1.ResourceList{
+						corev1.ResourceStorage: resource.MustParse("10Gi"),
+					},
+				},
+				StorageClassName: &ins.Spec.PodPolicy.StorageClassName,
+			},
+		},
+	}
+}
+
 func mysqlContainers(ins *databasev1.Mysql) []corev1.Container {
 	return []corev1.Container{
 		{
@@ -102,7 +124,7 @@ func mysqlContainers(ins *databasev1.Mysql) []corev1.Container {
 					MountPath: "/var/lib/mysql",
 				},
 			},
-			Resources: ins.Spec.PodPolicy.ExtraResources,
+			Resources: ins.Spec.Mysql.Resources,
 		},
 	}
 }
@@ -115,7 +137,7 @@ func MysqlStatefulset(ins *databasev1.Mysql) *appsv1.StatefulSet {
 
 	lables := map[string]string{
 		"clustername": ins.Name,
-		"app":         MYSQLAPP,
+		"app":         databasev1.MYSQLAPP,
 	}
 
 	statefulSet := &appsv1.StatefulSet{
@@ -128,8 +150,8 @@ func MysqlStatefulset(ins *databasev1.Mysql) *appsv1.StatefulSet {
 			Namespace: ins.Namespace,
 			Labels: map[string]string{
 				"clustername":   ins.Name,
-				"app":           MYSQLAPP,
-				"clusterstatus": MgrNOTinstalled,
+				"app":           databasev1.MYSQLAPP,
+				"clusterstatus": databasev1.MgrNOTinstalled,
 			},
 		},
 		Spec: appsv1.StatefulSetSpec{
@@ -179,6 +201,7 @@ func MysqlStatefulset(ins *databasev1.Mysql) *appsv1.StatefulSet {
 				},
 			},
 			// 添加 VolumeClaimTemplates 如果需要
+			// VolumeClaimTemplates: VolumeTmp(),
 		},
 	}
 
