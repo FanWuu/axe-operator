@@ -9,7 +9,9 @@ spec:
   replica: 3
   mysql:
     mysqlimage: "mysql:8.0.32"
-    rootPassword: "123456"
+    rootPassword: "axe_operator"
+    mysqlUser: "axe"
+    mysqlPassword: "123456"
     resources :
       requests:
         cpu: "1024m"

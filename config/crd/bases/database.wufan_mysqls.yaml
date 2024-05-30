@@ -77,6 +77,12 @@ spec:
                       The configmap should contain the keys `mysql.cnf` and `plugin.cnf` at least, key `init.sql` is optional.
                       If empty, operator will generate a default template named <spec.metadata.name>-mysql.
                     type: string
+                  mysqlPassword:
+                    default: "123456"
+                    type: string
+                  mysqlUser:
+                    default: axe
+                    type: string
                   mysqlimage:
                     default: mysql:8.0.32
                     description: The mysql image.
@@ -156,9 +162,8 @@ spec:
                         type: object
                     type: object
                   rootPassword:
+                    default: axe_operator
                     type: string
-                required:
-                - rootPassword
                 type: object
               persistence:
                 description: |-

@@ -124,7 +124,17 @@ type MysqlOpts struct {
 	// +optional
 	PluginConf MysqlConf `json:"pluginConf,omitempty"`
 
+	// +optional
+	// +kubebuilder:default:="axe_operator"
 	RootPassword string `json:"rootPassword"`
+
+	// +optional
+	// +kubebuilder:default:="axe"
+	MysqlUser string `json:"mysqlUser"`
+
+	// +optional
+	// +kubebuilder:default:="123456"
+	MysqlPassword string `json:"mysqlPassword"`
 
 	// The compute resource requirements.
 	// +optional

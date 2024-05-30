@@ -13,6 +13,18 @@ import (
 func env(ins *databasev1.Mysql) []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{
+			Name:  "MYSQL_USER",
+			Value: ins.Spec.Mysql.MysqlUser,
+		},
+		{
+			Name:  "MYSQL_PASSWORD",
+			Value: ins.Spec.Mysql.MysqlPassword,
+		},
+		{
+			Name:  "MYSQL_DATABASE",
+			Value: ins.Spec.Mysql.MysqlUser,
+		},
+		{
 			Name:  "MYSQL_ROOT_PASSWORD",
 			Value: ins.Spec.Mysql.RootPassword,
 		},
