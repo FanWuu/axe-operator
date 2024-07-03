@@ -1,4 +1,4 @@
-package syncer
+package innodbcluster
 
 import (
 	databasev1 "axe/api/v1"

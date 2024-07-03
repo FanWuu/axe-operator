@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	databasev1 "axe/api/v1"
-	syncer "axe/syncer/mysql"
+	innodbcluster "axe/cluster/innodbcluster"
 )
 
 func (r *MysqlReconciler) cleanupRelatedResources(ctx context.Context, ins *databasev1.Mysql) error {
@@ -127,19 +127,19 @@ func CreateOrUpdate(ctx context.Context, c client.Client, obj client.Object) err
 func ApplyResources(ctx context.Context, r client.Client, ins *databasev1.Mysql) (ctrl.Result, error) {
 	log.Log.Info("create or update resource", "clusterspace", ins.Namespace, "clustername", ins.Name)
 
-	if err := CreateOrUpdate(ctx, r, syncer.MysqlHeadlesSVC(ins)); err != nil {
+	if err := CreateOrUpdate(ctx, r, innodbcluster.MysqlHeadlesSVC(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := CreateOrUpdate(ctx, r, syncer.MysqlConfigmap(ins)); err != nil {
+	if err := CreateOrUpdate(ctx, r, innodbcluster.MysqlConfigmap(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := CreateOrUpdate(ctx, r, syncer.RouterConfigmap(ins)); err != nil {
+	if err := CreateOrUpdate(ctx, r, innodbcluster.RouterConfigmap(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if err := CreateOrUpdate(ctx, r, syncer.MysqlStatefulset(ins)); err != nil {
+	if err := CreateOrUpdate(ctx, r, innodbcluster.MysqlStatefulset(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -150,13 +150,13 @@ func ApplyResources(ctx context.Context, r client.Client, ins *databasev1.Mysql)
 func CreateRouter(ctx context.Context, r client.Client, ins *databasev1.Mysql) (ctrl.Result, error) {
 	log.Log.Info("create  router resource", "clusterspace", ins.Namespace, "clustername", ins.Name)
 
-	if err := CreateOrUpdate(ctx, r, syncer.RouterDeployment(ins)); err != nil {
+	if err := CreateOrUpdate(ctx, r, innodbcluster.RouterDeployment(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := CreateOrUpdate(ctx, r, syncer.RouterClusterSVC(ins)); err != nil {
+	if err := CreateOrUpdate(ctx, r, innodbcluster.RouterClusterSVC(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := CreateOrUpdate(ctx, r, syncer.RouterNodeSVC(ins)); err != nil {
+	if err := CreateOrUpdate(ctx, r, innodbcluster.RouterNodeSVC(ins)); err != nil {
 		return ctrl.Result{}, err
 	}
 	log.Log.Info("Create Routers sucess ")
@@ -176,7 +176,7 @@ func CreateCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) 
 			statefulSet.ObjectMeta.Labels["clusterstatus"] == databasev1.MgrNOTinstalled {
 			// dba.createcluster()
 			log.Log.Info("StatefulSet is running and innodb cluster lables MGR_NOT_INSTALLED")
-			if err := syncer.CreateMGR(ctx, ins); err == nil {
+			if err := innodbcluster.CreateMGR(ctx, ins); err == nil {
 				log.Log.Info("Create innodb cluster SUCCESS")
 
 				return ctrl.Result{}, nil
