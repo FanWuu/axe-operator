@@ -194,15 +194,15 @@ func CreateCluster(ctx context.Context, r client.Client, ins *databasev1.Mysql) 
 
 		} else {
 			log.Log.Error(err, "StatefulSet is not running normally ")
-			log.Log.Info("StatefulSet is not running normally", "ReadyReplicas:", statefulSet.Status.ReadyReplicas, "Replicas", statefulSet.Status.Replicas)
-			log.Log.Info("StatefulSet is not running normally", "CurrentRevision:", statefulSet.Status.CurrentRevision, "UpdateRevision", statefulSet.Status.UpdateRevision)
-			log.Log.Info("StatefulSet is not running normally", "clusterstatus:", statefulSet.ObjectMeta.Labels["clusterstatus"])
+			log.Log.Info("StatefulSet is not running normally", "ReadyReplicas", statefulSet.Status.ReadyReplicas, "Replicas", statefulSet.Status.Replicas)
+			log.Log.Info("StatefulSet is not running normally", "CurrentRevision", statefulSet.Status.CurrentRevision, "UpdateRevision", statefulSet.Status.UpdateRevision)
+			log.Log.Info("StatefulSet is not running normally", "clusterstatus", statefulSet.ObjectMeta.Labels["clusterstatus"])
 
 			return ctrl.Result{}, err
 		}
 
 	} else if !apierrors.IsNotFound(err) {
-		log.Log.Error(err, "statefulset: ", ins.Name, "not fondun")
+		log.Log.Error(err, "statefulset", ins.Name, "not fondun")
 	}
 	return ctrl.Result{}, nil
 }
