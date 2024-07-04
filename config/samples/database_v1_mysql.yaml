@@ -8,6 +8,24 @@ metadata:
 spec:
   replica: 3
   mysql:
-    rootPassword: "123456"
+    mysqlimage: "mysql:8.0.32"
+    rootPassword: "axe_operator"
+    mysqlUser: "axe"
+    mysqlPassword: "123456"
+    resources :
+      requests:
+        cpu: "1024m"
+        memory: "256Mi"
+      limits:
+        cpu: "2048m"
+        memory: "2Gi"
   router:
     replica: 1
+    routerimage: "mysql/mysql-router:latest"
+    resources :
+      requests:
+        cpu: "1024m"
+        memory: "256Mi"
+      limits:
+        cpu: "2048m"
+        memory: "2Gi"

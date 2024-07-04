@@ -19,7 +19,7 @@ func MysqlConfigmap(ins *databasev1.Mysql) *corev1.ConfigMap {
 			Namespace: ins.Namespace,
 		},
 		Data: map[string]string{
-			"mysql.cnf":  mysqlConfigData,
+			"mysql.cnf":  mysqlcnf(ins),
 			"plugin.cnf": PluginConfdata,
 		},
 	}

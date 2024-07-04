@@ -44,36 +44,32 @@ type Policy struct {
 	// +optional
 	// +kubebuilder:default:={requests: {cpu: "1", memory: "1Gi"}}
 	ExtraResources corev1.ResourceRequirements `json:"extraResources,omitempty"`
-	// +optional
-	// +kubebuilder:default:=""
-	StorageClassName string `json:"storageClassName,omitempty"`
 }
 
 // Persistence is the desired spec for storing mysql data. Only one of its
 // members may be specified.
-// TODO generate api code
-// type Persistence struct {
-// 	// Create a volume to store data.
-// 	// +optional
-// 	// +kubebuilder:default:=true
-// 	Enabled bool `json:"enabled,omitempty"`
+type Persistence struct {
+	// Create a volume to store data.
+	// +optional
+	// +kubebuilder:default:=true
+	Enabled bool `json:"enabled,omitempty"`
 
-// 	// AccessModes contains the desired access modes the volume should have.
-// 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
-// 	// +optional
-// 	// +kubebuilder:default:={"ReadWriteOnce"}
-// 	AccessModes []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
+	// AccessModes contains the desired access modes the volume should have.
+	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
+	// +optional
+	// +kubebuilder:default:={"ReadWriteOnce"}
+	AccessModes []corev1.PersistentVolumeAccessMode `json:"accessModes,omitempty"`
 
-// 	// Name of the StorageClass required by the claim.
-// 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
-// 	// +optional
-// 	StorageClass *string `json:"storageClass,omitempty"`
+	// Name of the StorageClass required by the claim.
+	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#class-1
+	// +optional
+	StorageClass string `json:"storageClass,omitempty"`
 
-// 	// Size of persistent volume claim.
-// 	// +optional
-// 	// +kubebuilder:default:="10Gi"
-// 	Size string `json:"size,omitempty"`
-// }
+	// Size of persistent volume claim.
+	// +optional
+	// +kubebuilder:default:="10Gi"
+	Size string `json:"size,omitempty"`
+}
 
 // MysqlSpec defines the desired state of Mysql
 type MysqlSpec struct {
@@ -95,6 +91,9 @@ type MysqlSpec struct {
 	// +optional
 	// +kubebuilder:default:={imagePullPolicy: "IfNotPresent", extraResources: {requests: {cpu: "10m", memory: "32Mi"}}}
 	PodPolicy Policy `json:"podpolicy,omitempty"`
+
+	// +optional
+	Persistence Persistence `json:"persistence,omitempty"`
 }
 
 type MysqlOpts struct {
@@ -102,7 +101,7 @@ type MysqlOpts struct {
 	// The mysql image.
 	// +optional
 	// +kubebuilder:default:="mysql:8.0.32"
-	MysqlImage string `json:"image,omitempty"`
+	MysqlImage string `json:"mysqlimage,omitempty"`
 
 	// MysqlConfTemplate is the configmap name of the template for mysql config.
 	// The configmap should contain the keys `mysql.cnf` and `plugin.cnf` at least, key `init.sql` is optional.
@@ -125,7 +124,17 @@ type MysqlOpts struct {
 	// +optional
 	PluginConf MysqlConf `json:"pluginConf,omitempty"`
 
+	// +optional
+	// +kubebuilder:default:="axe_operator"
 	RootPassword string `json:"rootPassword"`
+
+	// +optional
+	// +kubebuilder:default:="axe"
+	MysqlUser string `json:"mysqlUser"`
+
+	// +optional
+	// +kubebuilder:default:="123456"
+	MysqlPassword string `json:"mysqlPassword"`
 
 	// The compute resource requirements.
 	// +optional
@@ -138,7 +147,7 @@ type RouterOpts struct {
 	// The mysql-router image.
 	// +optional
 	// +kubebuilder:default:="mysql/mysql-router:latest"
-	RouterImage string `json:"RouterImage,omitempty"`
+	RouterImage string `json:"routerimage,omitempty"`
 
 	// +optional
 	// +kubebuilder:validation:Enum=0;1;2;3
@@ -147,7 +156,7 @@ type RouterOpts struct {
 
 	// The compute resource requirements.
 	// +optional
-	// +kubebuilder:default:={limits: {cpu: "2048m", memory: "2Gi"}, requests: {cpu: "500m", memory: "64Mi"}}
+	// +kubebuilder:default:={limits: {cpu: "2048m", memory: "2Gi"}, requests: {cpu: "1024m", memory: "256Mi"}}
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// MysqlConfTemplate is the configmap name of the template for mysql config.
